@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise E-Commerce Store</title>
+
+<style>
+/* ---------------- 🎨 UI/UX IMPROVEMENTS ---------------- */
+:root {
+  --primary: #1f2937; /* Darker primary */
+  --accent: #10b981; /* Green accent (modern/enterprise look) */
+  --bg: #f9fafb;
+  --card: #ffffff;
+  --shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+* { box-sizing: border-box; font-family: 'Inter', system-ui; transition: all 0.3s ease-out; }
+body { margin: 0; background: var(--bg); color: var(--primary); }
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 25px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header strong { font-size: 1.5rem; color: var(--accent); }
+
+header input {
+  width: 40%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  transition: border-color 0.2s;
+}
+header input:focus { border-color: var(--accent); outline: none; }
+
+button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.1s;
+}
+button:hover { background: #059669; }
+button:active { transform: scale(0.98); }
+
+/* ---------------- GRID & PRODUCT ---------------- */
+#productGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+  padding: 30px;
+}
+
+.product {
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.product:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow);
+}
+
+.product img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.tags {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 5px;
+}
+
+/* ---------------- MODALS & CART ---------------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.modal.open {
+  display: flex;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-content {
+  background: var(--card);
+  padding: 30px;
+  width: 90%;
+  max-width: 550px;
+  border-radius: 12px;
+  max-height: 90vh;
+  overflow: auto;
+  transform: translateY(-50px);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.modal.open .modal-content {
+  transform: translateY(0);
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 15px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #eee;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.quantity-control button {
+  padding: 5px 10px;
+  background: #e5e7eb;
+  color: var(--primary);
+  font-weight: bold;
+}
+.quantity-control button:hover { background: #d1d5db; }
+.quantity-control span { min-width: 20px; text-align: center; }
+
+input, textarea, select {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* ---------------- PAGES ---------------- */
+.page-view {
+  display: none;
+}
+.page-view.active {
+  display: block;
+}
+
+#adminPanel {
+  padding: 30px;
+}
+#adminPanel h3 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+</style>
+</head>
+
+<body>
+
+<header>
+  <nav>
+    <a href="#store" style="text-decoration: none;">
+      <strong>Premium Store</strong>
+    </a>
+  </nav>
+  <input id="search" placeholder="Search by name or #tag">
+  <div>
+    <button onclick="changePage('admin')">Admin</button>
+    <button onclick="changePage('store')">Store</button>
+    <button onclick="openCart()">Cart (<span id="cartCount">0</span>)</button>
+  </div>
+</header>
+
+<main id="appContainer">
+
+  <div id="storeView" class="page-view active">
+    <div id="productGrid"></div>
+  </div>
+
+  <div id="adminView" class="page-view">
+    <div id="adminPanel">
+      <h2>Admin Panel (Vanilla JS Simulation)</h2>
+      <p>Products are stored in your browser's Local Storage.</p>
+      
+      <h3>Add New Product</h3>
+      <form id="productForm">
+        <input required placeholder="Product Name" id="pName">
+        <input required placeholder="Price (৳)" id="pPrice" type="number">
+        <input required placeholder="Tags (e.g. #audio #wireless)" id="pTags">
+        <input required placeholder="Image URL (e.g. https://picsum.photos/300/200)" id="pImg">
+        <button type="submit">Add Product</button>
+      </form>
+
+      <h3 style="margin-top: 30px;">Current Products</h3>
+      <div id="adminProductList"></div>
+    </div>
+  </div>
+
+</main>
+
+<div class="modal" id="cartModal">
+  <div class="modal-content">
+    <h3>Your Cart</h3>
+    <div id="cartItems"></div>
+    <p><strong>Total: ৳<span id="total">0</span></strong></p>
+    <div class="button-group">
+      <button onclick="openCheckout()">Checkout</button>
+      <button onclick="closeCart()" style="background: #ef4444;">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="checkoutModal">
+  <div class="modal-content">
+    <h3>Checkout</h3>
+    <form id="checkoutForm">
+      <input required placeholder="Full Name" id="name">
+      <input required placeholder="Primary Phone" id="phone1">
+      <textarea required placeholder="Address" id="address"></textarea>
+
+      <select id="payment" required>
+        <option value="">Select Payment Method</option>
+        <option value="bkash">bKash (Simulated API)</option>
+        <option value="rocket">Rocket (Simulated API)</option>
+        <option value="cod">Cash on Delivery</option>
+      </select>
+
+      <div class="button-group">
+        <button type="submit">Confirm Order</button>
+        <button type="button" onclick="closeCheckout()" style="background: #9ca3af;">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* ---------------- STATE MANAGEMENT (Local Storage) ---------------- */
+const INITIAL_PRODUCTS = [
+  {id:1,name:"Wireless Headphone X",price:3500,tags:["#audio","#wireless"],img:"https://picsum.photos/300/200?v=1"},
+  {id:2,name:"Smart Watch Pro",price:2800,tags:["#watch","#smart"],img:"https://picsum.photos/300/200?v=2"},
+  {id:3,name:"Bluetooth Speaker Mini",price:2200,tags:["#audio","#speaker"],img:"https://picsum.photos/300/200?v=3"}
+];
+
+// Helper to get products, or set initial if none exist
+function getProducts() {
+  const stored = localStorage.getItem("products");
+  if (!stored) {
+    localStorage.setItem("products", JSON.stringify(INITIAL_PRODUCTS));
+    return INITIAL_PRODUCTS;
+  }
+  return JSON.parse(stored);
+}
+
+let products = getProducts();
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+function saveProducts() {
+  localStorage.setItem("products", JSON.stringify(products));
+  renderAdminProducts();
+  renderProducts(products);
+}
+
+function saveCart() {
+  // Filter out items with quantity 0
+  cart = cart.filter(item => item.quantity > 0);
+  localStorage.setItem("cart", JSON.stringify(cart));
+  document.getElementById("cartCount").innerText = cart.length;
+}
+
+/* ---------------- CART ACTIONS (Quantity Control) ---------------- */
+function addToCart(productId) {
+  const id = parseInt(productId);
+  const existingItem = cart.find(item => item.id === id);
+  const product = products.find(p => p.id === id);
+  
+  if (!product) return;
+
+  if (existingItem) {
+    existingItem.quantity += 1;
+  } else {
+    // Add product details + quantity property
+    cart.push({ ...product, quantity: 1 });
+  }
+  saveCart();
+  openCart();
+}
+
+function updateQuantity(id, delta) {
+  const item = cart.find(item => item.id === id);
+  if (item) {
+    item.quantity += delta;
+    if (item.quantity < 1) item.quantity = 0; // Will be filtered by saveCart
+  }
+  saveCart();
+  openCart();
+}
+
+/* ---------------- RENDER ---------------- */
+function renderProducts(list) {
+  const grid = document.getElementById("productGrid");
+  grid.innerHTML = "";
+  
+  // Handle case where search yields no results
+  if (list.length === 0) {
+    grid.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; padding: 50px;">
+      No products found matching your search.
+    </p>`;
+    return;
+  }
+  
+  list.forEach(p => {
+    grid.innerHTML += `
+      <div class="product">
+        <img src="${p.img}" alt="${p.name}">
+        <h4>${p.name}</h4>
+        <p style="font-size: 1.2rem; font-weight: bold; color: #374151;">৳${p.price}</p>
+        <p class="tags">${p.tags.join(" ")}</p>
+        <button style="margin-top: auto;" onclick='addToCart(${p.id})'>
+          Add to Cart
+        </button>
+      </div>`;
+  });
+}
+
+function renderAdminProducts() {
+  const adminList = document.getElementById("adminProductList");
+  adminList.innerHTML = "";
+  products.forEach(p => {
+    adminList.innerHTML += `
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 0;">
+        <span><strong>ID ${p.id}:</strong> ${p.name} (৳${p.price})</span>
+        <button style="background: #ef4444;" onclick='deleteProduct(${p.id})'>Delete</button>
+      </div>`;
+  });
+}
+
+/* ---------------- SEARCH & FILTER ---------------- */
+document.getElementById("search").addEventListener("input", e => {
+  const q = e.target.value.toLowerCase();
+  const filteredList = products.filter(p =>
+    p.name.toLowerCase().includes(q) ||
+    p.tags.join(" ").toLowerCase().includes(q)
+  );
+  renderProducts(filteredList);
+});
+
+/* ---------------- CART UI & MODALS ---------------- */
+function openCart() {
+  const modal = document.getElementById("cartModal");
+  modal.classList.add("open");
+  
+  const items = document.getElementById("cartItems");
+  let total = 0;
+  items.innerHTML = "";
+  
+  if (cart.length === 0) {
+    items.innerHTML = "<p style='text-align: center; color: #6b7280;'>Your cart is empty.</p>";
+    document.getElementById("total").innerText = 0;
+    return;
+  }
+  
+  cart.forEach(c => {
+    const itemTotal = c.price * c.quantity;
+    total += itemTotal;
+    items.innerHTML += `
+      <div class="cart-item">
+        <span style="flex: 2;">${c.name}</span>
+        <div class="quantity-control">
+          <button onclick="updateQuantity(${c.id}, -1)">-</button>
+          <span>${c.quantity}</span>
+          <button onclick="updateQuantity(${c.id}, 1)">+</button>
+        </div>
+        <span style="flex: 1; text-align: right;">৳${itemTotal}</span>
+      </div>
+    `;
+  });
+  document.getElementById("total").innerText = total;
+}
+
+function closeCart() { document.getElementById("cartModal").classList.remove("open"); }
+
+function openCheckout() {
+  closeCart();
+  document.getElementById("checkoutModal").classList.add("open");
+}
+
+function closeCheckout() { document.getElementById("checkoutModal").classList.remove("open"); }
+
+/* ---------------- MULTI-PAGE ROUTING (Hash) ---------------- */
+function changePage(pageId) {
+  const views = document.querySelectorAll('.page-view');
+  views.forEach(view => view.classList.remove('active'));
+  
+  document.getElementById(pageId + 'View').classList.add('active');
+  
+  if (pageId === 'admin') {
+    renderAdminProducts();
+  }
+}
+
+// Initial page load based on hash or default to store
+function handleHashChange() {
+  const hash = window.location.hash.replace('#', '');
+  if (hash === 'admin') {
+    changePage('admin');
+  } else {
+    changePage('store');
+  }
+}
+
+window.addEventListener('hashchange', handleHashChange);
+window.location.hash = window.location.hash || 'store';
+handleHashChange(); // Run on load
+
+/* ---------------- ADMIN ACTIONS ---------------- */
+document.getElementById("productForm").addEventListener("submit", e => {
+  e.preventDefault();
+  
+  const newProduct = {
+    id: Date.now(), // Use timestamp for unique ID
+    name: document.getElementById("pName").value,
+    price: parseFloat(document.getElementById("pPrice").value),
+    tags: document.getElementById("pTags").value.split(' ').filter(t => t.startsWith('#')),
+    img: document.getElementById("pImg").value
+  };
+  
+  products.push(newProduct);
+  saveProducts();
+  document.getElementById("productForm").reset();
+  alert("Product added successfully!");
+});
+
+function deleteProduct(id) {
+  products = products.filter(p => p.id !== id);
+  saveProducts();
+}
+
+/* ---------------- CHECKOUT SIMULATION ---------------- */
+document.getElementById("checkoutForm").addEventListener("submit", e => {
+  e.preventDefault();
+
+  const total = cart.reduce((s, c) => s + (c.price * c.quantity), 0);
+  const method = payment.value;
+
+  if (cart.length === 0) {
+    alert("Your cart is empty! Add products before checking out.");
+    return;
+  }
+
+  // --- bKash/Rocket API Simulation ---
+  if (method === "bkash" || method === "rocket") {
+    alert(`
+      ⚠️ SECURITY ALERT: In a real application, the ${method} flow requires a secure backend server! 
+      
+      Simulating ${method} API call for ৳${total}
+      
+      Order details:
+      Name: ${name.value}
+      Phone: ${phone1.value}
+    `);
+    
+    // In a real flow, you'd redirect to the payment gateway here.
+  } else if (method === "cod") {
+    alert(`Order placed! Total ৳${total}. You selected Cash on Delivery.`);
+  } else {
+     alert("Please select a valid payment method.");
+     return;
+  }
+
+  // Finalize order (clear cart and close modal)
+  cart = [];
+  saveCart();
+  closeCheckout();
+  changePage('store'); // Return to store view
+});
+
+// Initial load
+saveCart();
+renderProducts(products);
+</script>
+
+</body>
+</html>
