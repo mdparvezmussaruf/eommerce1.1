@@ -90,7 +90,7 @@ button:active { transform: scale(0.98); }
   margin-top: 5px;
 }
 
-/* ---------------- MODALS & CART (Keep same as before) ---------------- */
+/* ---------------- MODALS & CART ---------------- */
 .modal {
   position: fixed;
   inset: 0;
@@ -169,7 +169,7 @@ input, textarea, select {
   display: block;
 }
 
-/* ---------------- ADMIN TABLE STYLES (NEW) ---------------- */
+/* ---------------- ADMIN TABLE STYLES ---------------- */
 #adminPanel {
   padding: 30px;
 }
@@ -182,7 +182,7 @@ input, textarea, select {
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   background: white;
   border-radius: 8px;
-  overflow: hidden; /* For rounded corners */
+  overflow: hidden;
 }
 .product-table th, .product-table td {
   padding: 12px 15px;
@@ -202,6 +202,27 @@ input, textarea, select {
 .product-table button {
   padding: 6px 10px;
   font-size: 0.9rem;
+}
+
+/* ---------------- CHECKOUT REVIEW (NEW) ---------------- */
+#orderReview {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fcfcfc;
+}
+.review-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    padding: 5px 0;
+}
+.review-total {
+    font-weight: bold;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+    margin-top: 10px;
 }
 </style>
 </head>
@@ -236,7 +257,7 @@ input, textarea, select {
       <h3>Add New Product</h3>
       <form id="productForm">
         <input required placeholder="Product Name" id="pName">
-        <input required placeholder="Price (৳)" id="pPrice" type="number">
+        <input required placeholder="Price (৳)" id="pPrice" type="number" min="1">
         <input required placeholder="Tags (e.g. #audio #wireless)" id="pTags">
         <input required placeholder="Image URL (e.g. https://picsum.photos/300/200)" id="pImg">
         <button type="submit">Add Product</button>
@@ -264,8 +285,16 @@ input, textarea, select {
 
 <div class="modal" id="checkoutModal">
   <div class="modal-content">
-    <h3>Checkout</h3>
+    <h3>Final Checkout</h3>
+    
+    <div id="orderReview">
+        <h4>Order Summary</h4>
+        <div id="reviewItems"></div>
+        <div class="review-total">Total Amount: ৳<span id="reviewTotal">0</span></div>
+    </div>
+
     <form id="checkoutForm">
+      <h4>Shipping and Payment</h4>
       <input required placeholder="Full Name" id="name">
       <input required placeholder="Primary Phone" id="phone1">
       <textarea required placeholder="Address" id="address"></textarea>
@@ -307,7 +336,6 @@ let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
 function saveProducts() {
   localStorage.setItem("products", JSON.stringify(products));
-  // KEY CHANGE 1: RENDER BOTH ADMIN LIST AND STORE GRID AFTER SAVING
   renderAdminProducts();
   renderProducts(products);
 }
@@ -318,7 +346,7 @@ function saveCart() {
   document.getElementById("cartCount").innerText = cart.length;
 }
 
-/* ---------------- CART ACTIONS (Quantity Control) ---------------- */
+/* ---------------- CART ACTIONS & RENDER ---------------- */
 function addToCart(productId) {
   const id = parseInt(productId);
   const existingItem = cart.find(item => item.id === id);
@@ -345,7 +373,6 @@ function updateQuantity(id, delta) {
   openCart();
 }
 
-/* ---------------- STORE RENDER ---------------- */
 function renderProducts(list) {
   const grid = document.getElementById("productGrid");
   grid.innerHTML = "";
@@ -371,7 +398,6 @@ function renderProducts(list) {
   });
 }
 
-/* ---------------- ADMIN LIST RENDER (NEW PROFESSIONAL TABLE) ---------------- */
 function renderAdminProducts() {
   const adminList = document.getElementById("adminProductList");
   
@@ -380,7 +406,6 @@ function renderAdminProducts() {
     return;
   }
 
-  // KEY CHANGE 2: RENDER AS A PROFESSIONAL HTML TABLE
   let tableHTML = `
     <table class="product-table">
       <thead>
@@ -413,17 +438,7 @@ function renderAdminProducts() {
   adminList.innerHTML = tableHTML;
 }
 
-/* ---------------- SEARCH & FILTER ---------------- */
-document.getElementById("search").addEventListener("input", e => {
-  const q = e.target.value.toLowerCase();
-  const filteredList = products.filter(p =>
-    p.name.toLowerCase().includes(q) ||
-    p.tags.join(" ").toLowerCase().includes(q)
-  );
-  renderProducts(filteredList);
-});
-
-/* ---------------- MODALS & ROUTING (Same as before) ---------------- */
+/* ---------------- MODALS & UI ---------------- */
 function openCart() {
   const modal = document.getElementById("cartModal");
   modal.classList.add("open");
@@ -436,7 +451,7 @@ function openCart() {
     document.getElementById("total").innerText = 0;
     return;
   }
-  // ... (rest of the openCart logic) ...
+  
   cart.forEach(c => {
     const itemTotal = c.price * c.quantity;
     total += itemTotal;
@@ -456,23 +471,50 @@ function openCart() {
 }
 
 function closeCart() { document.getElementById("cartModal").classList.remove("open"); }
+
+// NEW: Function to render order summary in checkout modal
+function renderOrderSummary() {
+    const reviewItems = document.getElementById('reviewItems');
+    const reviewTotal = document.getElementById('reviewTotal');
+    let total = 0;
+
+    reviewItems.innerHTML = '';
+
+    cart.forEach(c => {
+        const itemTotal = c.price * c.quantity;
+        total += itemTotal;
+        reviewItems.innerHTML += `
+            <div class="review-item">
+                <span>${c.name} (${c.quantity} x ৳${c.price})</span>
+                <span>৳${itemTotal}</span>
+            </div>
+        `;
+    });
+    reviewTotal.innerText = total;
+}
+
+
 function openCheckout() {
   if (cart.length === 0) {
      alert("Cart is empty! Cannot proceed to checkout.");
      return;
   }
   closeCart();
+  renderOrderSummary(); // Call the new summary function
   document.getElementById("checkoutModal").classList.add("open");
 }
+
 function closeCheckout() { document.getElementById("checkoutModal").classList.remove("open"); }
 
+
+/* ---------------- ROUTING ---------------- */
 function changePage(pageId) {
   const views = document.querySelectorAll('.page-view');
   views.forEach(view => view.classList.remove('active'));
   document.getElementById(pageId + 'View').classList.add('active');
   
   if (pageId === 'admin') {
-    renderAdminProducts(); // Ensure the table is fresh when admin is opened
+    renderAdminProducts(); 
   }
 }
 
@@ -489,26 +531,23 @@ window.addEventListener('hashchange', handleHashChange);
 window.location.hash = window.location.hash || 'store';
 handleHashChange();
 
-/* ---------------- ADMIN ACTIONS (Product Addition) ---------------- */
+/* ---------------- ADMIN ACTIONS ---------------- */
 document.getElementById("productForm").addEventListener("submit", e => {
   e.preventDefault();
   
-  // Create a high-quality product ID (simple incremental approach for vanilla JS)
   const maxId = products.length > 0 ? Math.max(...products.map(p => p.id)) : 0;
 
   const newProduct = {
     id: maxId + 1, 
     name: document.getElementById("pName").value,
     price: parseFloat(document.getElementById("pPrice").value) || 0,
-    // Clean up and format tags
     tags: document.getElementById("pTags").value.split(' ').map(t => t.trim()).filter(t => t.startsWith('#')),
     img: document.getElementById("pImg").value
   };
   
   products.push(newProduct);
-  saveProducts(); // This saves to localStorage and triggers both renders
+  saveProducts(); 
   
-  // Give success feedback
   document.getElementById("productForm").reset();
   alert(`Product "${newProduct.name}" (ID: ${newProduct.id}) added successfully and is now live in the store!`);
 });
@@ -520,39 +559,72 @@ function deleteProduct(id) {
   }
 }
 
-/* ---------------- CHECKOUT SIMULATION (Same as before) ---------------- */
+/* ---------------- CHECKOUT SIMULATION (Enhanced) ---------------- */
 document.getElementById("checkoutForm").addEventListener("submit", e => {
   e.preventDefault();
 
   const total = cart.reduce((s, c) => s + (c.price * c.quantity), 0);
   const method = payment.value;
+  const customerName = name.value;
+  const customerPhone = phone1.value;
 
   if (cart.length === 0) {
     alert("Your cart is empty! Add products before checking out.");
     return;
   }
 
+  // --- bKash/Rocket API Flow Simulation ---
   if (method === "bkash" || method === "rocket") {
+    
+    // Step 1: Server (Simulated) initiates payment and gets redirect URL
     alert(`
-      ⚠️ API Simulation: In a real system, the ${method} flow is handled securely by a server.
-      
-      Simulating ${method} transaction for ৳${total}.
-      (In reality, you would be redirected to the payment gateway.)
+      --- Step 1: Initiating Payment ---
+      Securely sending order details to the server for ${method} integration.
+      Order Total: ৳${total}
+      Customer: ${customerName}, Phone: ${customerPhone}
     `);
+
+    // Step 2: Client redirects to Payment Gateway
+    setTimeout(() => {
+        alert(`
+          --- Step 2: Payment Gateway Redirect ---
+          (Simulated) You are now being securely redirected to the official ${method} payment page.
+          You would enter your account number and PIN on the official gateway page here.
+        `);
+    }, 500); // Simulate a brief server delay
+
+    // Step 3: Payment is successful and server gets callback
+    setTimeout(() => {
+         alert(`
+          --- Step 3: Payment Success (Simulated Callback) ---
+          The ${method} API confirms successful payment of ৳${total}.
+          Your order is now confirmed and will be processed!
+        `);
+        // Finalize order after successful payment simulation
+        finalizeOrder();
+    }, 1500); // Simulate the time needed for the user to complete payment
+
   } else if (method === "cod") {
-    alert(`Order placed! Total ৳${total}. You selected Cash on Delivery.`);
+    alert(`Order placed! Total ৳${total}. You selected Cash on Delivery (COD). We will call to confirm your order.`);
+    finalizeOrder();
   } else {
      alert("Please select a valid payment method.");
      return;
   }
-
-  // Finalize order (clear cart and close modal)
-  cart = [];
-  saveCart();
-  closeCheckout();
-  changePage('store'); // Return to store view
 });
+
+function finalizeOrder() {
+    cart = [];
+    saveCart();
+    closeCheckout();
+    changePage('store');
+}
+
 
 // Initial load
 saveCart();
-renderProducts(products); // Initial rendering of the store products
+renderProducts(products); 
+</script>
+
+</body>
+</html>
